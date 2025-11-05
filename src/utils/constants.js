@@ -10,13 +10,12 @@ export const QUIZ_DIFFICULTY = {
 }
 
 export const QUIZ_CATEGORIES = [
-  'General',
-  'Programming',
-  'Mathematics',
-  'Science',
-  'History',
-  'Geography',
-  'Languages'
+  'Экономика',
+  'Бухгалтерлік есеп',
+  'Менеджмент',
+  'Маркетинг',
+  'Қаржы',
+  'Жалпы'
 ]
 
 export const STORAGE_KEYS = {
@@ -30,4 +29,12 @@ export const API_ENDPOINTS = {
   QUESTIONS: '/api/questions',
   QUIZZES: '/api/quizzes',
   RESULTS: '/api/results'
+}
+
+export const QUIZ_CONFIG = {
+  MAX_QUESTIONS_PER_QUIZ: 50,
+  MAX_OPTIONS_PER_QUESTION: 6,
+  MIN_OPTIONS_PER_QUESTION: 2,
+  DEFAULT_QUIZ_DURATION: 1800,
+  MAX_QUIZ_DURATION: 7200
 }

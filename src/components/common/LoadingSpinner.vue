@@ -15,7 +15,7 @@ export default {
     size: {
       type: String,
       default: 'medium',
-      validator: (value) => ['small', 'medium', 'large'].includes(value)
+      validator: (value) => ['small', 'medium', 'large', 'xlarge'].includes(value)
     },
     color: {
       type: String,
@@ -48,6 +48,11 @@ export default {
 .large {
   width: 32px;
   height: 32px;
+}
+
+.xlarge {
+  width: 48px;
+  height: 48px;
 }
 
 @keyframes spin {

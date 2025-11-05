@@ -3,25 +3,28 @@
     <div class="container">
       <div class="header-content">
         <router-link to="/" class="logo">
-          <div class="logo-icon">Q</div>
-          <span class="logo-text">QuizMaster</span>
+          <div class="logo-icon">Э</div>
+          <span class="logo-text">Экономика Модуль</span>
         </router-link>
         
         <nav class="nav" v-if="authStore.isAuthenticated">
-          <router-link to="/" class="nav-link">Dashboard</router-link>
-          <router-link to="/quizzes" class="nav-link">Quizzes</router-link>
-          <router-link to="/results" class="nav-link" v-if="authStore.isStudent">Results</router-link>
-          <router-link to="/admin" class="nav-link" v-if="authStore.isAdmin">Admin</router-link>
+          <router-link to="/" class="nav-link">Басты бет</router-link>
+          <router-link to="/quizzes" class="nav-link">Тесттер</router-link>
+          <router-link to="/results" class="nav-link" v-if="authStore.isStudent">Нәтижелер</router-link>
+          <router-link to="/admin" class="nav-link" v-if="authStore.isAdmin">Әкімші</router-link>
         </nav>
         
         <div class="user-section" v-if="authStore.isAuthenticated">
-          <span class="user-name">Hello, {{ authStore.userName }}</span>
-          <button @click="logout" class="logout-btn">Logout</button>
+          <span class="user-name">Сәлем, {{ authStore.userName }}</span>
+          <div class="user-role" :class="authStore.userRole">
+            {{ roleText }}
+          </div>
+          <button @click="logout" class="logout-btn">Шығу</button>
         </div>
         
         <div class="auth-section" v-else>
-          <router-link to="/login" class="auth-link">Login</router-link>
-          <router-link to="/register" class="auth-link primary">Sign Up</router-link>
+          <router-link to="/login" class="auth-link">Кіру</router-link>
+          <router-link to="/register" class="auth-link primary">Тіркелу</router-link>
         </div>
       </div>
     </div>
@@ -30,11 +33,16 @@
 
 <script>
 import { useAuthStore } from '../../stores/auth'
+import { computed } from 'vue'
 
 export default {
   name: 'AppHeader',
   setup() {
     const authStore = useAuthStore()
+    
+    const roleText = computed(() => {
+      return authStore.isAdmin ? 'Әкімші' : 'Студент'
+    })
     
     const logout = () => {
       authStore.logout()
@@ -43,6 +51,7 @@ export default {
     
     return {
       authStore,
+      roleText,
       logout
     }
   }
@@ -132,6 +141,24 @@ export default {
   font-weight: 500;
 }
 
+.user-role {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.user-role.admin {
+  background: var(--primary-100);
+  color: var(--primary-700);
+}
+
+.user-role.student {
+  background: var(--success-100);
+  color: var(--success-700);
+}
+
 .logout-btn {
   background: var(--gray-100);
   border: 1px solid var(--gray-300);
@@ -140,6 +167,7 @@ export default {
   color: var(--gray-700);
   cursor: pointer;
   transition: var(--transition);
+  font-size: var(--text-sm);
 }
 
 .logout-btn:hover {
@@ -157,6 +185,7 @@ export default {
   border-radius: var(--radius);
   font-weight: 500;
   transition: var(--transition);
+  font-size: var(--text-sm);
 }
 
 .auth-link:not(.primary) {
@@ -185,6 +214,15 @@ export default {
   
   .user-name {
     display: none;
+  }
+  
+  .auth-section {
+    gap: var(--space-2);
+  }
+  
+  .auth-link {
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-xs);
   }
 }
 </style>

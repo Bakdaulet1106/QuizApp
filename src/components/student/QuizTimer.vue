@@ -1,28 +1,53 @@
 <template>
-  <div class="quiz-timer" :class="timerClass">
-    <div class="timer-content">
-      <div class="timer-icon">⏱️</div>
-      <div class="timer-text">
-        <div class="time-display">{{ formatTime(timeRemaining) }}</div>
-        <div class="time-label">Time Remaining</div>
-      </div>
+  <div :class="['quiz-timer', { 
+    warning: timeLeft <= warningThreshold, 
+    danger: timeLeft <= dangerThreshold,
+    paused: !isActive
+  }]">
+    <div class="timer-header">
+      <span class="timer-icon">⏱️</span>
+      <span class="timer-label">Қалған уақыт:</span>
     </div>
-    
+    <div class="timer-display">
+      <span class="time">{{ formatTime(timeLeft) }}</span>
+    </div>
     <div class="timer-progress">
       <div 
         class="progress-bar" 
         :style="{ width: progressPercentage + '%' }"
       ></div>
     </div>
+    <div class="timer-actions" v-if="showControls">
+      <BaseButton 
+        v-if="isActive"
+        @click="$emit('pause')"
+        variant="outline"
+        size="small"
+      >
+        Тоқтату
+      </BaseButton>
+      <BaseButton 
+        v-else
+        @click="$emit('resume')"
+        variant="primary"
+        size="small"
+      >
+        Жалғастыру
+      </BaseButton>
+    </div>
   </div>
 </template>
 
 <script>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
+import BaseButton from '../common/BaseButton.vue'
 import { formatTime } from '../../utils/helpers'
 
 export default {
   name: 'QuizTimer',
+  components: {
+    BaseButton
+  },
   props: {
     duration: {
       type: Number,
@@ -31,51 +56,74 @@ export default {
     isActive: {
       type: Boolean,
       default: true
+    },
+    showControls: {
+      type: Boolean,
+      default: false
+    },
+    warningThreshold: {
+      type: Number,
+      default: 300 // 5 minutes
+    },
+    dangerThreshold: {
+      type: Number,
+      default: 60 // 1 minute
     }
   },
-  emits: ['time-up'],
+  emits: ['time-up', 'pause', 'resume'],
   setup(props, { emit }) {
-    const timeRemaining = ref(props.duration)
-    const timerInterval = ref(null)
+    const timeLeft = ref(props.duration)
+    const progressPercentage = computed(() => (timeLeft.value / props.duration) * 100)
+    let timer = null
 
-    const progressPercentage = computed(() => {
-      return (timeRemaining.value / props.duration) * 100
-    })
-
-    const timerClass = computed(() => {
-      if (timeRemaining.value <= 60) return 'critical'
-      if (timeRemaining.value <= 300) return 'warning'
-      return 'normal'
-    })
-
-    const startTimer = () => {
-      if (timerInterval.value) {
-        clearInterval(timerInterval.value)
-      }
-
-      timerInterval.value = setInterval(() => {
-        if (timeRemaining.value > 0) {
-          timeRemaining.value--
-        } else {
-          clearInterval(timerInterval.value)
+    const updateTimer = () => {
+      if (timeLeft.value > 0 && props.isActive) {
+        timeLeft.value--
+        
+        // Emit warnings
+        if (timeLeft.value === props.warningThreshold) {
+          emit('warning', 'warning')
+        } else if (timeLeft.value === props.dangerThreshold) {
+          emit('warning', 'danger')
+        }
+        
+        if (timeLeft.value === 0) {
           emit('time-up')
         }
-      }, 1000)
+      }
+    }
+
+    const startTimer = () => {
+      if (!timer) {
+        timer = setInterval(updateTimer, 1000)
+      }
     }
 
     const stopTimer = () => {
-      if (timerInterval.value) {
-        clearInterval(timerInterval.value)
-        timerInterval.value = null
+      if (timer) {
+        clearInterval(timer)
+        timer = null
+      }
+    }
+
+    const resetTimer = () => {
+      stopTimer()
+      timeLeft.value = props.duration
+      if (props.isActive) {
+        startTimer()
       }
     }
 
     watch(() => props.isActive, (isActive) => {
-      if (isActive && timeRemaining.value > 0) {
+      if (isActive) {
         startTimer()
       } else {
         stopTimer()
       }
+    })
+
+    watch(() => props.duration, (newDuration) => {
+      resetTimer()
     })
 
     onMounted(() => {
@@ -89,9 +137,8 @@ export default {
     })
 
     return {
-      timeRemaining,
+      timeLeft,
       progressPercentage,
-      timerClass,
       formatTime
     }
   }
@@ -101,105 +148,130 @@ export default {
 <style scoped>
 .quiz-timer {
   background: white;
-  border: 2px solid var(--gray-200);
   border-radius: var(--radius-lg);
   padding: var(--space-4);
-  min-width: 150px;
+  box-shadow: var(--shadow-md);
+  border: 2px solid var(--primary-500);
   text-align: center;
-  transition: var(--transition);
-}
-
-.quiz-timer.normal {
-  border-color: var(--primary-500);
+  transition: all var(--transition);
+  min-width: 200px;
 }
 
 .quiz-timer.warning {
   border-color: var(--warning-500);
-  background: var(--warning-50);
+  background: #fef3c7;
 }
 
-.quiz-timer.critical {
+.quiz-timer.danger {
   border-color: var(--error-500);
-  background: var(--error-50);
+  background: #fee2e2;
   animation: pulse 1s infinite;
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.8; }
+.quiz-timer.paused {
+  border-color: var(--gray-400);
+  background: var(--gray-100);
+  opacity: 0.8;
 }
 
-.timer-content {
+.timer-header {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-3);
-  margin-bottom: var(--space-3);
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
 }
 
 .timer-icon {
-  font-size: var(--text-xl);
+  font-size: var(--text-lg);
 }
 
-.timer-text {
-  text-align: center;
+.timer-label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--gray-700);
 }
 
-.time-display {
-  font-size: var(--text-xl);
+.timer-display {
+  margin-bottom: var(--space-3);
+}
+
+.time {
+  font-size: var(--text-2xl);
   font-weight: 700;
-  color: var(--gray-900);
-  line-height: 1;
-  margin-bottom: var(--space-1);
+  color: var(--gray-800);
+  font-family: 'Courier New', monospace;
+  letter-spacing: 1px;
 }
 
-.time-label {
-  font-size: var(--text-xs);
+.quiz-timer.warning .time {
+  color: var(--warning-700);
+}
+
+.quiz-timer.danger .time {
+  color: var(--error-700);
+}
+
+.quiz-timer.paused .time {
   color: var(--gray-600);
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
 .timer-progress {
-  width: 100%;
-  height: 4px;
+  height: 8px;
   background: var(--gray-200);
-  border-radius: 2px;
+  border-radius: 4px;
   overflow: hidden;
+  margin-bottom: var(--space-3);
 }
 
 .progress-bar {
   height: 100%;
-  border-radius: 2px;
-  transition: width 1s linear;
-}
-
-.quiz-timer.normal .progress-bar {
   background: var(--primary-500);
+  border-radius: 4px;
+  transition: width 1s linear, background-color 0.3s ease;
 }
 
 .quiz-timer.warning .progress-bar {
   background: var(--warning-500);
 }
 
-.quiz-timer.critical .progress-bar {
+.quiz-timer.danger .progress-bar {
   background: var(--error-500);
 }
 
-@media (max-width: 640px) {
+.quiz-timer.paused .progress-bar {
+  background: var(--gray-400);
+}
+
+.timer-actions {
+  display: flex;
+  justify-content: center;
+}
+
+@keyframes pulse {
+  0%, 100% { 
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 0.8;
+    transform: scale(1.02);
+  }
+}
+
+@media (max-width: 768px) {
   .quiz-timer {
-    min-width: 120px;
     padding: var(--space-3);
+    min-width: auto;
   }
   
-  .timer-content {
+  .time {
+    font-size: var(--text-xl);
+  }
+  
+  .timer-header {
     flex-direction: column;
-    gap: var(--space-2);
-  }
-  
-  .time-display {
-    font-size: var(--text-lg);
+    gap: var(--space-1);
   }
 }
 </style>

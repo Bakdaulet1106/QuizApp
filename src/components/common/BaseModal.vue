@@ -79,6 +79,12 @@ export default {
   justify-content: center;
   z-index: 1000;
   padding: var(--space-4);
+  animation: fade-in 0.2s ease-out;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .modal-container {
@@ -178,6 +184,12 @@ export default {
   
   .modal-overlay {
     padding: var(--space-2);
+  }
+  
+  .modal-header,
+  .modal-content,
+  .modal-footer {
+    padding: var(--space-4);
   }
 }
 </style>

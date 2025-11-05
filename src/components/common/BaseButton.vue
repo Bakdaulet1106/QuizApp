@@ -23,7 +23,7 @@ export default {
     variant: {
       type: String,
       default: 'primary',
-      validator: (value) => ['primary', 'secondary', 'outline', 'danger'].includes(value)
+      validator: (value) => ['primary', 'secondary', 'outline', 'danger', 'success'].includes(value)
     },
     size: {
       type: String,
@@ -56,6 +56,7 @@ export default {
   transition: var(--transition);
   text-decoration: none;
   font-family: inherit;
+  line-height: 1;
 }
 
 .base-button:focus {
@@ -104,6 +105,15 @@ export default {
 
 .danger:hover:not(:disabled) {
   background: var(--error-600);
+}
+
+.success {
+  background: var(--success-500);
+  color: white;
+}
+
+.success:hover:not(:disabled) {
+  background: var(--success-600);
 }
 
 /* Sizes */

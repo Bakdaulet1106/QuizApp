@@ -1,65 +1,84 @@
 import api from './api'
-import { StorageService } from './storageService'
 
-export const AuthService = {
-  async login(email, password) {
+export const authService = {
+  async login(credentials) {
     try {
       const response = await api.get('/users')
-      const users = response.data
+      const users = Array.isArray(response) ? response : []
+      const user = users.find(u => 
+        u.email === credentials.email && u.password === credentials.password
+      )
       
-      const user = users.find(u => u.email === email && u.password === password)
-      
-      if (user) {
-        const userData = {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          token: btoa(JSON.stringify(user)) // Simple token for demo
-        }
-        
-        StorageService.setUser(userData)
-        return { success: true, user: userData }
-      } else {
-        return { success: false, error: 'Invalid email or password' }
+      if (!user) {
+        throw new Error('Қате email немесе құпия сөз')
+      }
+
+      const { password, ...userWithoutPassword } = user
+      return {
+        user: userWithoutPassword,
+        token: 'mock-jwt-token-' + user.id
       }
     } catch (error) {
       console.error('Login error:', error)
-      return { success: false, error: 'Login failed. Please try again.' }
+      throw new Error('Серверге қосылу қатесі')
     }
   },
 
   async register(userData) {
     try {
-      const response = await api.post('/users', {
+      const response = await api.get('/users')
+      const users = Array.isArray(response) ? response : []
+      const existingUser = users.find(u => u.email === userData.email)
+      
+      if (existingUser) {
+        throw new Error('Бұл email-мен тіркелген пайдаланушы бар')
+      }
+
+      const newUser = {
+        id: Date.now(),
         ...userData,
         role: 'student',
         createdAt: new Date().toISOString()
-      })
-      
-      const user = response.data
-      const userWithToken = {
-        ...user,
-        token: btoa(JSON.stringify(user))
       }
-      
-      StorageService.setUser(userWithToken)
-      return { success: true, user: userWithToken }
+
+      await api.post('/users', newUser)
+
+      const { password, ...userWithoutPassword } = newUser
+      return {
+        user: userWithoutPassword,
+        token: 'mock-jwt-token-' + newUser.id
+      }
     } catch (error) {
-      console.error('Registration error:', error)
-      return { success: false, error: 'Registration failed. Please try again.' }
+      console.error('Register error:', error)
+      throw new Error('Тіркелу қатесі')
     }
   },
 
-  logout() {
-    StorageService.clearUser()
+  async logout() {
+    // Clear local storage
+    localStorage.removeItem('user')
+    localStorage.removeItem('token')
+    return { success: true }
   },
 
-  getCurrentUser() {
-    return StorageService.getUser()
+  async getCurrentUser() {
+    const user = JSON.parse(localStorage.getItem('user'))
+    const token = localStorage.getItem('token')
+    
+    if (!user || !token) {
+      throw new Error('Пайдаланушы табылмады')
+    }
+    
+    return user
   },
 
-  isAuthenticated() {
-    return !!StorageService.getUser()
+  async updateProfile(userId, userData) {
+    try {
+      const response = await api.patch(`/users/${userId}`, userData)
+      return response
+    } catch (error) {
+      console.error('Update profile error:', error)
+      throw new Error('Профильді жаңарту қатесі')
+    }
   }
 }

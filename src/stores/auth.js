@@ -1,39 +1,41 @@
 import { defineStore } from 'pinia'
-import { AuthService } from '../services/authService'
-import { USER_ROLES } from '../utils/constants'
+import { authService } from '../services/authService'
+import { StorageService } from '../services/storageService'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
-    user: null,
+    user: StorageService.getUser(),
+    token: localStorage.getItem('token'),
     isLoading: false,
     error: null
   }),
 
   getters: {
-    isAuthenticated: (state) => !!state.user,
-    isAdmin: (state) => state.user?.role === USER_ROLES.ADMIN,
-    isStudent: (state) => state.user?.role === USER_ROLES.STUDENT,
-    userName: (state) => state.user?.name || 'User'
+    isAuthenticated: (state) => !!state.user && !!state.token,
+    isAdmin: (state) => state.user?.role === 'admin',
+    isStudent: (state) => state.user?.role === 'student',
+    userName: (state) => state.user?.name || 'Қонақ',
+    userEmail: (state) => state.user?.email,
+    userId: (state) => state.user?.id
   },
 
   actions: {
-    async login(email, password) {
+    async login(credentials) {
       this.isLoading = true
       this.error = null
       
       try {
-        const result = await AuthService.login(email, password)
+        const response = await authService.login(credentials)
+        this.user = response.user
+        this.token = response.token
         
-        if (result.success) {
-          this.user = result.user
-          return { success: true }
-        } else {
-          this.error = result.error
-          return { success: false, error: result.error }
-        }
+        StorageService.setUser(response.user)
+        localStorage.setItem('token', response.token)
+        
+        return { success: true }
       } catch (error) {
-        this.error = 'Login failed. Please try again.'
-        return { success: false, error: this.error }
+        this.error = error.message
+        return { success: false, error: error.message }
       } finally {
         this.isLoading = false
       }
@@ -44,34 +46,84 @@ export const useAuthStore = defineStore('auth', {
       this.error = null
       
       try {
-        const result = await AuthService.register(userData)
+        const response = await authService.register(userData)
+        this.user = response.user
+        this.token = response.token
         
-        if (result.success) {
-          this.user = result.user
-          return { success: true }
-        } else {
-          this.error = result.error
-          return { success: false, error: result.error }
-        }
+        StorageService.setUser(response.user)
+        localStorage.setItem('token', response.token)
+        
+        return { success: true }
       } catch (error) {
-        this.error = 'Registration failed. Please try again.'
-        return { success: false, error: this.error }
+        this.error = error.message
+        return { success: false, error: error.message }
       } finally {
         this.isLoading = false
       }
     },
 
-    logout() {
-      AuthService.logout()
-      this.user = null
+    async logout() {
+      try {
+        await authService.logout()
+        this.user = null
+        this.token = null
+        this.error = null
+        
+        StorageService.clearUser()
+        localStorage.removeItem('token')
+        
+        return { success: true }
+      } catch (error) {
+        console.error('Logout error:', error)
+        // Force logout even if there's an error
+        this.user = null
+        this.token = null
+        StorageService.clearUser()
+        localStorage.removeItem('token')
+        return { success: true }
+      }
+    },
+
+    async updateProfile(userData) {
+      this.isLoading = true
+      this.error = null
+      
+      try {
+        const response = await authService.updateProfile(this.user.id, userData)
+        this.user = { ...this.user, ...response }
+        StorageService.setUser(this.user)
+        
+        return { success: true, user: this.user }
+      } catch (error) {
+        this.error = error.message
+        return { success: false, error: error.message }
+      } finally {
+        this.isLoading = false
+      }
+    },
+
+    async checkAuth() {
+      if (!this.token || !this.user) {
+        return false
+      }
+      
+      try {
+        const user = await authService.getCurrentUser()
+        this.user = user
+        return true
+      } catch (error) {
+        this.logout()
+        return false
+      }
+    },
+
+    clearError() {
       this.error = null
     },
 
-    initialize() {
-      const user = AuthService.getCurrentUser()
-      if (user) {
-        this.user = user
-      }
+    setUser(user) {
+      this.user = user
+      StorageService.setUser(user)
     }
   }
 })

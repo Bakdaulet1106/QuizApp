@@ -1,5 +1,5 @@
 <template>
-  <div :class="['base-card', { hoverable, padding }]">
+  <div :class="['base-card', { hoverable, padding, flat }]">
     <div class="card-header" v-if="$slots.header || title">
       <slot name="header">
         <h3 v-if="title" class="card-title">{{ title }}</h3>
@@ -31,6 +31,10 @@ export default {
     padding: {
       type: Boolean,
       default: true
+    },
+    flat: {
+      type: Boolean,
+      default: false
     }
   }
 }
@@ -42,6 +46,11 @@ export default {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow);
   transition: var(--transition);
+  border: 1px solid var(--gray-200);
+}
+
+.base-card.flat {
+  box-shadow: none;
   border: 1px solid var(--gray-200);
 }
 

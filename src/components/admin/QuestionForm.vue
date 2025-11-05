@@ -1,16 +1,16 @@
 <template>
   <form @submit.prevent="handleSubmit" class="question-form">
     <div class="form-section">
-      <h3>Question Details</h3>
+      <h3>Сұрақ мәліметтері</h3>
       
       <div class="form-group">
-        <label for="question-text" class="form-label">Question Text *</label>
+        <label for="question-text" class="form-label">Сұрақ мәтіні *</label>
         <textarea
           id="question-text"
           v-model="form.question"
           class="form-textarea"
           :class="{ error: errors.question }"
-          placeholder="Enter your question here..."
+          placeholder="Сұрақты енгізіңіз..."
           rows="3"
           required
         ></textarea>
@@ -19,7 +19,7 @@
 
       <div class="form-row">
         <div class="form-group">
-          <label for="category" class="form-label">Category *</label>
+          <label for="category" class="form-label">Санат *</label>
           <select
             id="category"
             v-model="form.category"
@@ -27,14 +27,14 @@
             :class="{ error: errors.category }"
             required
           >
-            <option value="">Select Category</option>
+            <option value="">Санатты таңдаңыз</option>
             <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
           </select>
           <div v-if="errors.category" class="error-message">{{ errors.category }}</div>
         </div>
 
         <div class="form-group">
-          <label for="difficulty" class="form-label">Difficulty *</label>
+          <label for="difficulty" class="form-label">Қиындық деңгейі *</label>
           <select
             id="difficulty"
             v-model="form.difficulty"
@@ -42,29 +42,29 @@
             :class="{ error: errors.difficulty }"
             required
           >
-            <option value="">Select Difficulty</option>
-            <option value="easy">Easy</option>
-            <option value="medium">Medium</option>
-            <option value="hard">Hard</option>
+            <option value="">Қиындық деңгейін таңдаңыз</option>
+            <option value="easy">Оңай</option>
+            <option value="medium">Орташа</option>
+            <option value="hard">Қиын</option>
           </select>
           <div v-if="errors.difficulty" class="error-message">{{ errors.difficulty }}</div>
         </div>
       </div>
 
       <div class="form-group">
-        <label for="explanation" class="form-label">Explanation (Optional)</label>
+        <label for="explanation" class="form-label">Түсіндірме (міндетті емес)</label>
         <textarea
           id="explanation"
           v-model="form.explanation"
           class="form-textarea"
-          placeholder="Provide an explanation for the correct answer..."
+          placeholder="Дұрыс жауаптың түсіндірмесін жазыңыз..."
           rows="2"
         ></textarea>
       </div>
     </div>
 
     <div class="form-section">
-      <h3>Answer Options</h3>
+      <h3>Жауап нұсқалары</h3>
       
       <div class="options-list">
         <div
@@ -79,7 +79,7 @@
               type="text"
               class="form-input"
               :class="{ error: errors.options && errors.options[index] }"
-              :placeholder="`Option ${String.fromCharCode(65 + index)}`"
+              :placeholder="`${String.fromCharCode(65 + index)} нұсқасы`"
               required
             />
             <button
@@ -87,6 +87,7 @@
               @click="removeOption(index)"
               class="remove-option-btn"
               :disabled="form.options.length <= 2"
+              title="Нұсқаны жою"
             >
               &times;
             </button>
@@ -103,13 +104,20 @@
         variant="outline"
         size="small"
         :disabled="form.options.length >= 6"
+        class="add-option-btn"
       >
-        + Add Option
+        <span class="button-icon">+</span>
+        Нұсқа қосу
       </BaseButton>
+
+      <div class="options-info">
+        <span class="info-text">Қазіргі уақытта {{ form.options.length }} нұсқа бар</span>
+        <span class="info-text">Минимум: 2, Максимум: 6</span>
+      </div>
     </div>
 
     <div class="form-section">
-      <h3>Correct Answer</h3>
+      <h3>Дұрыс жауап</h3>
       
       <div class="correct-answer-selector">
         <div
@@ -122,7 +130,10 @@
           ]"
         >
           <div class="option-marker">{{ String.fromCharCode(65 + index) }}</div>
-          <div class="option-text">{{ option || `Option ${String.fromCharCode(65 + index)}` }}</div>
+          <div class="option-text">{{ option || `${String.fromCharCode(65 + index)} нұсқасы` }}</div>
+          <div class="selection-indicator" v-if="form.correctAnswer === index">
+            <span class="checkmark">✓</span>
+          </div>
         </div>
       </div>
       <div v-if="errors.correctAnswer" class="error-message">{{ errors.correctAnswer }}</div>
@@ -134,21 +145,45 @@
         @click="$emit('cancel')"
         variant="outline"
       >
-        Cancel
+        Болдырмау
       </BaseButton>
       <BaseButton
         type="submit"
         variant="primary"
         :isLoading="questionStore.isLoading"
       >
-        {{ editingQuestion ? 'Update Question' : 'Create Question' }}
+        {{ editingQuestion ? 'Сұрақты жаңарту' : 'Сұрақ құру' }}
       </BaseButton>
+    </div>
+
+    <!-- Preview Section -->
+    <div class="form-section preview-section" v-if="showPreview">
+      <h3>Алдын ала қарау</h3>
+      <div class="preview-content">
+        <div class="preview-question">
+          <strong>Сұрақ:</strong> {{ form.question || '[Сұрақ мәтіні]' }}
+        </div>
+        <div class="preview-options">
+          <div
+            v-for="(option, index) in form.options"
+            :key="index"
+            class="preview-option"
+          >
+            <span class="option-letter">{{ String.fromCharCode(65 + index) }}</span>
+            <span class="option-text">{{ option || `[${String.fromCharCode(65 + index)} нұсқасы]` }}</span>
+            <span v-if="form.correctAnswer === index" class="correct-indicator">✓ Дұрыс</span>
+          </div>
+        </div>
+        <div class="preview-explanation" v-if="form.explanation">
+          <strong>Түсіндірме:</strong> {{ form.explanation }}
+        </div>
+      </div>
     </div>
   </form>
 </template>
 
 <script>
-import { reactive, onMounted } from 'vue'
+import { reactive, onMounted, watch } from 'vue'
 import { useQuestionStore } from '../../stores/questions'
 import { QUIZ_CATEGORIES } from '../../utils/constants'
 import { validateQuestion } from '../../utils/validators'
@@ -179,6 +214,7 @@ export default {
     })
 
     const errors = reactive({})
+    const showPreview = ref(false)
 
     const categories = QUIZ_CATEGORIES
     const editingQuestion = !!props.question
@@ -231,9 +267,16 @@ export default {
         
         emit('saved')
       } catch (error) {
-        console.error('Error saving question:', error)
+        console.error('Сұрақты сақтау қатесі:', error)
       }
     }
+
+    // Auto-show preview when form has content
+    watch(() => form, (newForm) => {
+      if (newForm.question && newForm.options.some(opt => opt.trim())) {
+        showPreview.value = true
+      }
+    }, { deep: true })
 
     onMounted(() => {
       initializeForm()
@@ -244,6 +287,7 @@ export default {
       errors,
       categories,
       editingQuestion,
+      showPreview,
       questionStore,
       addOption,
       removeOption,
@@ -261,9 +305,9 @@ export default {
 }
 
 .form-section {
-  padding: var(--space-4);
+  padding: var(--space-6);
   border: 1px solid var(--gray-200);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
   background: var(--gray-50);
 }
 
@@ -272,6 +316,17 @@ export default {
   font-weight: 600;
   color: var(--gray-900);
   margin-bottom: var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.form-section h3::before {
+  content: '';
+  width: 4px;
+  height: 20px;
+  background: var(--primary-500);
+  border-radius: 2px;
 }
 
 .form-group {
@@ -358,6 +413,7 @@ export default {
   font-weight: 600;
   color: var(--gray-700);
   flex-shrink: 0;
+  background: white;
 }
 
 .remove-option-btn {
@@ -378,11 +434,34 @@ export default {
 
 .remove-option-btn:hover:not(:disabled) {
   background: var(--error-600);
+  transform: scale(1.1);
 }
 
 .remove-option-btn:disabled {
   background: var(--gray-400);
   cursor: not-allowed;
+  transform: none;
+}
+
+.add-option-btn {
+  margin-bottom: var(--space-3);
+}
+
+.button-icon {
+  font-weight: bold;
+}
+
+.options-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-sm);
+  color: var(--gray-600);
+}
+
+.info-text {
+  background: var(--gray-200);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius);
 }
 
 .correct-answer-selector {
@@ -401,15 +480,18 @@ export default {
   cursor: pointer;
   transition: var(--transition);
   background: white;
+  position: relative;
 }
 
 .answer-option:hover {
   border-color: var(--primary-300);
+  transform: translateY(-1px);
 }
 
 .answer-option.selected {
   border-color: var(--primary-500);
   background: var(--primary-50);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
 }
 
 .answer-option.selected .option-marker {
@@ -429,12 +511,85 @@ export default {
   font-weight: 600;
 }
 
+.selection-indicator {
+  color: var(--primary-500);
+  font-weight: bold;
+}
+
+.checkmark {
+  font-size: var(--text-lg);
+}
+
 .form-actions {
   display: flex;
   justify-content: flex-end;
   gap: var(--space-3);
   padding-top: var(--space-4);
   border-top: 1px solid var(--gray-200);
+}
+
+.preview-section {
+  background: var(--primary-50);
+  border-color: var(--primary-200);
+}
+
+.preview-content {
+  background: white;
+  padding: var(--space-4);
+  border-radius: var(--radius);
+  border: 1px solid var(--primary-200);
+}
+
+.preview-question {
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--gray-200);
+  font-size: var(--text-lg);
+  color: var(--gray-800);
+}
+
+.preview-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.preview-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  background: var(--gray-50);
+}
+
+.preview-option .option-letter {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--gray-300);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: var(--text-xs);
+  flex-shrink: 0;
+}
+
+.correct-indicator {
+  color: var(--success-600);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  margin-left: auto;
+}
+
+.preview-explanation {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--gray-200);
+  color: var(--gray-700);
+  font-size: var(--text-sm);
 }
 
 @media (max-width: 768px) {
@@ -448,6 +603,15 @@ export default {
   
   .form-actions {
     flex-direction: column;
+  }
+  
+  .options-info {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  
+  .option-input-group {
+    gap: var(--space-2);
   }
 }
 </style>
